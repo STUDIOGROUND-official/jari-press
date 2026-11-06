@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>영화 자리 언론 노출 현황</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+:root{--bg:#2b3a33;--on-bg:#fff;--on-bg-sub:#c6d2cc;--point:#f2c94c;--surface:#fff;--fg:#141a17;--muted:#5d6762;--line:#dfe5e1;--th:#f1f4f2;--link:#0b57d0;
+  --sans:"Noto Sans KR",-apple-system,"Malgun Gothic",sans-serif}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--on-bg);font:14px/1.5 var(--sans);word-break:keep-all;overflow-wrap:anywhere}
+.page{max-width:1120px;margin:0 auto;padding-block:20px 32px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:14px}
+.page>*{min-width:0}
+h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-.02em}
+h1 em{font-style:normal;color:var(--point);margin-left:8px;font-variant-numeric:tabular-nums}
+.filters{display:flex;flex-wrap:wrap;gap:6px}
+input,select{font:13px var(--sans);color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 9px;min-width:0}
+.filters input{flex:1 1 220px}.filters select{flex:0 1 auto;max-width:100%}
+:focus-visible{outline:2px solid var(--point);outline-offset:2px}
+#ledger{display:grid;gap:14px}
+.day-head{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+.day-head b{font-size:24px;line-height:1.1;color:var(--point);font-variant-numeric:tabular-nums}
+.day-head span{color:var(--on-bg-sub);font-size:13px}
+.sheet{background:var(--surface);color:var(--fg);border-radius:8px;overflow:hidden}
+.row{display:grid;grid-template-columns:60px 130px minmax(0,1fr) 300px;gap:12px;padding:10px 14px;border-top:1px solid var(--line);align-items:start}
+.row.th{background:var(--th);border-top:0;padding-block:7px;font-size:12px;font-weight:700;color:var(--muted)}
+.when{font-variant-numeric:tabular-nums;color:var(--muted)}
+.outlet{font-weight:500}
+a.title{display:block;font-weight:700;color:var(--fg);text-decoration:none}
+a.title:hover{color:var(--link);text-decoration:underline}
+a.url{display:block;font-size:12px;color:var(--link);word-break:break-all}
+.point{font-size:13px}
+.point small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
+.empty{background:var(--surface);color:var(--muted);border-radius:8px;padding:22px;text-align:center}
+.scope{margin:0;font-size:12px;color:var(--on-bg-sub)}
+@media (max-width:760px){
+  .row.th{display:none}
+  .row{grid-template-columns:auto minmax(0,1fr);gap:2px 8px}
+  .row:nth-child(2){border-top:0}
+  .main,.point{grid-column:1/-1}.main{margin-top:3px}
+}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>〈자리〉 언론 노출 현황<em id="total">–</em></h1>
+  <div class="filters">
+    <input id="q" type="search" placeholder="매체, 제목, 내용 검색" aria-label="기사 검색">
+    <select id="rel" aria-label="릴리즈 필터"></select>
+  </div>
+  <div id="ledger"><div class="empty">기사를 불러오는 중입니다.</div></div>
+  <p class="scope" id="scope"></p>
+</div>
+<script>
+const $=id=>document.getElementById(id),DAYS="일월화수목금토";let articles=[];
+function el(t,c,x){const n=document.createElement(t);if(c)n.className=c;if(x!=null)n.textContent=x;return n}
+function safe(u){try{const p=new URL(u);return /^https?:$/.test(p.protocol)?p.href:null}catch{return null}}
+function label(k){const m=/^(\d{4})-(\d\d)-(\d\d)$/.exec(k);if(!m)return [k,""];return [`${+m[2]}/${+m[3]}`,DAYS[new Date(+m[1],+m[2]-1,+m[3]).getDay()]+"요일"]}
+function row(a){const r=el("div","row"),m=el("div","main"),u=safe(a.url),p=el("div","point",a.summary||"");
+  r.append(el("div","when",String(a.date).slice(11,16)),el("div","outlet",a.outlet));
+  if(u){const t=el("a","title",a.title),l=el("a","url",u);t.href=l.href=u;t.target=l.target="_blank";t.rel=l.rel="noopener";m.append(t,l)}else m.append(el("div","title",a.title));
+  if(a.release)p.append(el("small","",a.release));r.append(m,p);return r}
+function render(){const q=$("q").value.trim().toLowerCase(),rel=$("rel").value;
+  const rows=articles.filter(a=>(!rel||a.release===rel)&&(!q||[a.outlet,a.title,a.summary,a.release].join(" ").toLowerCase().includes(q)));
+  if(!rows.length){$("ledger").replaceChildren(el("div","empty","조건에 맞는 기사가 없습니다."));return}
+  const days=new Map();rows.forEach(a=>{const k=String(a.date).slice(0,10);if(!days.has(k))days.set(k,[]);days.get(k).push(a)});
+  $("ledger").replaceChildren(...[...days].map(([k,list])=>{const s=el("section"),h=el("div","day-head"),[d,w]=label(k),sh=el("div","sheet"),th=el("div","row th");
+    h.append(el("b","",d),el("span","",`${w} · ${list.length}건`));["시간","매체","기사 제목 / 링크","주요 내용"].forEach(t=>th.append(el("div","",t)));
+    sh.append(th,...list.map(row));s.append(h,sh);return s}))}
+fetch("articles.json?v="+Date.now()).then(r=>{if(!r.ok)throw 0;return r.json()}).then(d=>{
+  articles=[...d.articles].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  $("total").textContent=`총 ${articles.length}건`;
+  const rels=[...new Set(articles.map(a=>a.release).filter(Boolean))];
+  $("rel").replaceChildren(new Option("전체 릴리즈",""),...rels.map(r=>new Option(r,r)));
+  $("scope").textContent=`${d.updated} 업데이트 · 공개된 기사를 모은 자료이며, 일부 기사는 누락될 수 있습니다.`;
+  render()}).catch(()=>{$("ledger").replaceChildren(el("div","empty","기사 목록을 불러오지 못했습니다. 잠시 뒤 새로고침해 주세요."))});
+$("q").oninput=render;$("rel").onchange=render;
+</script>
+</body>
+</html>
